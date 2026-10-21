@@ -598,6 +598,34 @@ def t38_force_unsafe_recorded_in_audit():
         f"rc={rc} forced={len(rec.get('forced') or [])}"
 
 
+@case
+def t39_status_with_annotation_parsed():
+    """状态列写 `已确认 · ISO 通用` 是正常人的写法，不能被判成未确认（否则全表被拦）。"""
+    src = f"{TMP}/am.docx"; mkdoxc(src, P("清洁验证要求说明"))
+    run("map", src, "-o", f"{TMP}/am.map.json")
+    plan = f"{TMP}/am.plan.json"
+    json.dump({"parts": {"word/document.xml": {"0": "Cleaning validation requirements"}}}, open(plan, "w"))
+    terms = f"{TMP}/am.tsv"
+    open(terms, "w", encoding="utf-8").write(
+        "源术语\t译法\t状态\n清洁验证\tcleaning validation\t已确认 · ISO 通用\n")
+    rc, out = run("gate", "--map", f"{TMP}/am.map.json", "--plan", plan, "--terms", terms)
+    return rc == 0, f"rc={rc} {out[:70]}"
+
+
+@case
+def t40_unknown_status_still_blocks():
+    """但真正无法识别的状态仍要阻断 —— 放宽解析不能放宽判定。"""
+    src = f"{TMP}/an.docx"; mkdoxc(src, P("喷砂处理要求说明"))
+    run("map", src, "-o", f"{TMP}/an.map.json")
+    plan = f"{TMP}/an.plan.json"
+    json.dump({"parts": {"word/document.xml": {"0": "Blasting requirements"}}}, open(plan, "w"))
+    terms = f"{TMP}/an.tsv"
+    open(terms, "w", encoding="utf-8").write(
+        "源术语\t译法\t状态\n喷砂处理\tblasting\t大概可以吧\n")
+    rc, out = run("gate", "--map", f"{TMP}/an.map.json", "--plan", plan, "--terms", terms)
+    return rc == 1 and "GATE-003" in out, f"rc={rc} {out[:70]}"
+
+
 def main():
     if os.path.isdir(TMP):
         shutil.rmtree(TMP)
