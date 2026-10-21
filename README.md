@@ -4,6 +4,25 @@ Translate `.docx` / `.pptx` without wrecking the layout — plus a terminology t
 
 零依赖（Python 标准库），本地运行，不上传任何数据。
 
+## 60 秒验证（先跑这条，再读别的）
+
+```bash
+# 1) 进入仓库根目录（以下命令都要求在这里执行）
+cd doc-translate-keep-layout
+
+# 2) 生成一份样例文档，跑通全链路（零依赖，Python 3.11+）
+python examples/make_sample.py /tmp/sample.docx
+python scripts/translate_kit.py map   /tmp/sample.docx -o /tmp/map.json
+python scripts/translate_kit.py apply /tmp/sample.docx examples/plan.json --map /tmp/map.json -o /tmp/sample.en.docx
+python scripts/translate_kit.py check /tmp/sample.docx /tmp/sample.en.docx -o /tmp/report.json
+
+# 3) 自测：35 条回归用例
+python tests/run_tests.py
+```
+
+> **Windows 提示**：若输出中文乱码（`璇戞枃` 这类），先执行 `chcp 65001` 或在 PowerShell 里设 `[Console]::OutputEncoding=[Text.Encoding]::UTF8`。
+> 版本：`python scripts/translate_kit.py --version`。
+
 ## 它解决什么
 
 翻文档最难的不是翻，是三件收尾的事：
@@ -19,7 +38,7 @@ Translate `.docx` / `.pptx` without wrecking the layout — plus a terminology t
 ```bash
 python scripts/translate_kit.py map   in.docx -o map.json
 python scripts/translate_kit.py gate  --map map.json --plan plan.json --terms 术语表.tsv --src in.docx -o gate.json
-python scripts/translate_kit.py apply in.docx plan.json --map map.json -o out.en.docx
+python scripts/translate_kit.py apply in.docx plan.json --map map.json --terms 术语表.tsv -o out.en.docx
 python scripts/translate_kit.py check in.docx out.en.docx -o report.json
 ```
 
