@@ -1,13 +1,22 @@
 {
-  "parts": {
-    "word/document.xml": {
-      "0": "1 Scope",
-      "1": "This document specifies the cleaning validation requirements for tibial impact broach handles.",
-      "2": "It applies to Class IIa devices under MDR (EU) 2017/745.",
-      "3": "2 Terms",
-      "4": "2.1 Cleaning validation means the process of demonstrating that a cleaning process is effective by testing for residues.",
-      "5": "3 Requirements",
-      "6": "Residue limits shall not exceed 10 μg/cm², and endotoxin shall remain below 0.5 EU/mL."
+ "parts": {
+  "word/document.xml": {
+   "0": "[EN] 1 范围",
+   "1": "[EN] 本文件规定了胫骨冲击锉手柄的清洁验证要求。",
+   "2": "[EN] 适用于符合 MDR (EU) 2017/745 的 IIa 类器械。",
+   "3": "[EN] 2 术语",
+   "4": [
+    {
+     "src": "2.1 清洁验证",
+     "out": "[EN] 2.1 清洁验证"
+    },
+    {
+     "src": "指通过检测残留物证明清洁工艺有效的过程。",
+     "out": "[EN] 指通过检测残留物证明清洁工艺有效的过程。"
     }
+   ],
+   "5": "[EN] 3 要求",
+   "6": "[EN] 残留限度应不超过 10 μg/cm²，内毒素应低于 0.5 EU/mL。"
   }
+ }
 }
