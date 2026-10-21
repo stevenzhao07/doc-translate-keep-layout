@@ -1,7 +1,7 @@
 {
-  "src": "C:\\Users\\SZYL\\AppData\\Local\\Temp\\tmpv9mmudvh\\sample.docx",
-  "dst": "C:\\Users\\SZYL\\AppData\\Local\\Temp\\tmpv9mmudvh\\sample.en.docx",
-  "tool_version": "0.5.1",
+  "src": "C:\\Users\\SZYL\\AppData\\Local\\Temp\\tmpxq2yhgja\\sample.docx",
+  "dst": "C:\\Users\\SZYL\\AppData\\Local\\Temp\\tmpxq2yhgja\\sample.en.docx",
+  "tool_version": "0.5.2",
   "para_delta": {
     "word/document.xml": 0
   },
