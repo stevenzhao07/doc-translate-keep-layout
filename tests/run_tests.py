@@ -548,6 +548,56 @@ def t35_gate_reports_what_it_skipped():
     return ok, f"reviewed_has_terms={'GATE-003' in reviewed} skipped={bool(skipped)}"
 
 
+@case
+def t36_apply_twice_is_byte_identical():
+    """同一输入两次 apply 必须给出字节相同的产物，否则 audit 的 out_sha256 不可复现。"""
+    src = f"{TMP}/aj.docx"; mkdoxc(src, P("第一段中文") + P("第二段中文"))
+    run("map", src, "-o", f"{TMP}/aj.map.json")
+    plan = f"{TMP}/aj.plan.json"
+    json.dump({"parts": {"word/document.xml": {"0": "First paragraph", "1": "Second paragraph"}}},
+              open(plan, "w"))
+    o1, o2 = f"{TMP}/aj.1.docx", f"{TMP}/aj.2.docx"
+    run("apply", src, plan, "--map", f"{TMP}/aj.map.json", "-o", o1)
+    run("apply", src, plan, "--map", f"{TMP}/aj.map.json", "-o", o2)
+    import hashlib
+    h = [hashlib.sha256(open(p, "rb").read()).hexdigest() for p in (o1, o2)]
+    return h[0] == h[1], f"same={h[0] == h[1]}"
+
+
+@case
+def t37_apply_refuses_when_gate_blocked():
+    """闸门没过时，apply --gate 必须拒绝回填（否则 fail-closed 一个参数就能绕过）。"""
+    src = f"{TMP}/ak.docx"; mkdoxc(src, P("含待确认术语的段落"))
+    run("map", src, "-o", f"{TMP}/ak.map.json")
+    terms = f"{TMP}/ak.tsv"
+    open(terms, "w", encoding="utf-8").write("源术语\t译法\t状态\n待确认术语\tpending term\t待确认\n")
+    plan = f"{TMP}/ak.plan.json"
+    json.dump({"parts": {"word/document.xml": {"0": "A paragraph with a pending term"}}}, open(plan, "w"))
+    run("gate", "--map", f"{TMP}/ak.map.json", "--plan", plan, "--terms", terms, "--src", src,
+        "-o", f"{TMP}/ak.gate.json")
+    rc, out = run("apply", src, plan, "--map", f"{TMP}/ak.map.json",
+                  "--gate", f"{TMP}/ak.gate.json", "-o", f"{TMP}/ak.out.docx")
+    return rc == 3 and "拒绝回填" in out, f"rc={rc} {out[:70]}"
+
+
+@case
+def t38_force_unsafe_recorded_in_audit():
+    """--force-unsafe 强改必须留下 forced 记录，不能和干净运行长得一样。"""
+    src = f"{TMP}/al.docx"
+    body = '<w:p><w:r><w:t>第一行</w:t><w:br/><w:t>第二行</w:t></w:r></w:p>'
+    mkdoxc(src, body)
+    run("map", src, "-o", f"{TMP}/al.map.json")
+    plan = f"{TMP}/al.plan.json"
+    json.dump({"parts": {"word/document.xml": {"0": "Line one line two"}}}, open(plan, "w"))
+    rc, out = run("apply", src, plan, "--map", f"{TMP}/al.map.json", "--force-unsafe",
+                  "-o", f"{TMP}/al.out.docx")
+    audit = os.path.join(TMP, "audit.jsonl")
+    last = [l for l in open(audit, encoding="utf-8").read().splitlines() if l.strip()][-1]
+    rec = json.loads(last)
+    return rc == 0 and rec.get("forced") and rec["forced"][0]["para"] == 0, \
+        f"rc={rc} forced={len(rec.get('forced') or [])}"
+
+
 def main():
     if os.path.isdir(TMP):
         shutil.rmtree(TMP)
