@@ -1,0 +1,13 @@
+{
+  "parts": {
+    "word/document.xml": {
+      "0": "1 Scope",
+      "1": "This document specifies the cleaning validation requirements for tibial impact broach handles.",
+      "2": "It applies to Class IIa devices under MDR (EU) 2017/745.",
+      "3": "2 Terms",
+      "4": "2.1 Cleaning validation means the process of demonstrating that a cleaning process is effective by testing for residues.",
+      "5": "3 Requirements",
+      "6": "Residue limits shall not exceed 10 μg/cm², and endotoxin shall remain below 0.5 EU/mL."
+    }
+  }
+}
