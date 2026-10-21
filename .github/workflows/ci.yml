@@ -7,10 +7,16 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: test (${{ matrix.os }} · py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest]
         python-version: ["3.11", "3.13"]
+        include:
+          - os: windows-latest
+            python-version: "3.13"
     steps:
       - uses: actions/checkout@v4
 
@@ -19,26 +25,45 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: 语法检查
-        run: python -m compileall -q scripts tests
+        run: python -m compileall -q scripts tests examples
 
       - name: 红队回归测试
         run: python tests/run_tests.py
 
-      - name: 自测样例（合成样本全链路）
+      - name: 闸门全链路（照 README 抄的四个命令，必须 rc=0）
+        shell: bash
         run: |
-          python examples/make_sample.py /tmp/sample.docx
-          python scripts/translate_kit.py map /tmp/sample.docx -o /tmp/map.json
-          python scripts/translate_kit.py apply /tmp/sample.docx examples/plan.json --map /tmp/map.json -o /tmp/sample.en.docx
-          # check 返回 1 表示"有事要看"，不是构建失败 —— 报告照样打印
-          python scripts/translate_kit.py check /tmp/sample.docx /tmp/sample.en.docx -o /tmp/report.json || echo "check rc=$?"
-          cat /tmp/report.json
+          python examples/make_sample.py "$RUNNER_TEMP/sample.docx"
+          python scripts/translate_kit.py map "$RUNNER_TEMP/sample.docx" -o "$RUNNER_TEMP/map.json"
+          printf '源术语\t译法\t状态\n' > "$RUNNER_TEMP/terms.tsv"
+          python scripts/translate_kit.py gate --map "$RUNNER_TEMP/map.json" \
+            --plan examples/plan.json --terms "$RUNNER_TEMP/terms.tsv" \
+            --src "$RUNNER_TEMP/sample.docx" -o "$RUNNER_TEMP/gate.json"
+          python scripts/translate_kit.py apply "$RUNNER_TEMP/sample.docx" examples/plan.json \
+            --map "$RUNNER_TEMP/map.json" --terms "$RUNNER_TEMP/terms.tsv" -o "$RUNNER_TEMP/sample.en.docx"
+          python scripts/translate_kit.py check "$RUNNER_TEMP/sample.docx" "$RUNNER_TEMP/sample.en.docx" \
+            -o "$RUNNER_TEMP/report.json"
+          cat "$RUNNER_TEMP/report.json"
 
-      - name: 审计记录摘要
-        if: always()
+      - name: 闸门负向用例（未确认术语必须阻断，rc=1）
+        shell: bash
         run: |
-          echo "## 测试结果" >> $GITHUB_STEP_SUMMARY
-          if [ -f /tmp/report.json ]; then
-            echo '```json' >> $GITHUB_STEP_SUMMARY
-            head -c 2000 /tmp/report.json >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
+          printf '源术语\t译法\t状态\n清洁验证\tcleaning validation\t待确认\n' > "$RUNNER_TEMP/bad.tsv"
+          if python scripts/translate_kit.py gate --map "$RUNNER_TEMP/map.json" \
+               --plan examples/plan.json --terms "$RUNNER_TEMP/bad.tsv" \
+               --src "$RUNNER_TEMP/sample.docx" -o "$RUNNER_TEMP/gate-bad.json"; then
+            echo "::error::未确认术语没有阻断，闸门失效"; exit 1
+          else
+            echo "闸门按预期阻断（rc=$?）"
+          fi
+
+      - name: 结果摘要
+        if: always()
+        shell: bash
+        run: |
+          echo "## 测试结果（${{ matrix.os }} · py${{ matrix.python-version }}）" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f "$RUNNER_TEMP/report.json" ]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            head -c 1500 "$RUNNER_TEMP/report.json" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
