@@ -12,7 +12,7 @@ authors:
   - family-names: "Zhao"
     given-names: "Xinghua"
     orcid: "https://orcid.org/0009-0001-0512-1237"
-version: "0.5.0"
+version: "0.5.2"
 date-released: "2026-10-21"
 license: MIT
 repository-code: "https://github.com/stevenzhao07/doc-translate-keep-layout"
