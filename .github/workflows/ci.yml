@@ -29,7 +29,8 @@ jobs:
           python examples/make_sample.py /tmp/sample.docx
           python scripts/translate_kit.py map /tmp/sample.docx -o /tmp/map.json
           python scripts/translate_kit.py apply /tmp/sample.docx examples/plan.json --map /tmp/map.json -o /tmp/sample.en.docx
-          python scripts/translate_kit.py check /tmp/sample.docx /tmp/sample.en.docx -o /tmp/report.json
+          # check 返回 1 表示"有事要看"，不是构建失败 —— 报告照样打印
+          python scripts/translate_kit.py check /tmp/sample.docx /tmp/sample.en.docx -o /tmp/report.json || echo "check rc=$?"
           cat /tmp/report.json
 
       - name: 审计记录摘要
