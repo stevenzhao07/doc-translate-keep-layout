@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""translate_kit v0.3.0 — 文档翻译三件底层工具（纯标准库，零依赖）。
+"""translate_kit v0.5.1 — 文档翻译三件底层工具（纯标准库，零依赖）。
 
 子命令：
   map   提取 docx/pptx 段落：文本、容器、格式指纹、不可自动回填的阻断因素 → JSON
@@ -29,7 +29,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
-VERSION = "0.5.0"
+VERSION = "0.5.1"
 MAX_UNZIP_BYTES = 300 * 1024 * 1024  # 解压总量上限，超了直接拒绝
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -556,11 +556,13 @@ RULES = {
     "不可自动回填": ("GATE-008", "该段含换行/超链接/修订/混排，apply 会拒绝，需人工处理"),
     "译法不一致": ("GATE-009", "已确认术语的译法没有出现在该段译文里"),
     "逐 run 顺序未校验": ("GATE-010", "逐 run 译文用的是纯字符串数组，顺序只能靠人保证"),
+    "逐 run 原文不符": ("GATE-011", "{src,out} 里的 src 与该 run 的实际原文不一致（顺序错位）"),
 }
 
 STATUS_ENUM = ("用户指定", "已确认", "待确认")
 BLOCKING_KINDS = {"漏译", "越界或非整数编号", "待确认术语被翻译", "译文为空或同原文",
-                  "map 与源文档不符", "术语表不可用", "不可自动回填", "译法不一致"}
+                  "map 与源文档不符", "术语表不可用", "不可自动回填", "译法不一致",
+                  "逐 run 原文不符"}
 
 
 def read_terms(path):
@@ -584,6 +586,44 @@ def read_terms(path):
                          c[itr].strip() if itr is not None and len(c) > itr else "",
                          c[ist].strip()))
     return rows
+
+
+def plan_text(pv):
+    """把 plan 值统一成"译文全文"：字符串 / 字符串数组 / {src,out} 数组都支持。
+    gate 与 apply 必须共用这一处，否则两边对同一份 plan 的判断会不一致（v0.5.0 的教训）。"""
+    if isinstance(pv, str):
+        return pv
+    if isinstance(pv, list):
+        parts = []
+        for x in pv:
+            if isinstance(x, str):
+                parts.append(x)
+            elif isinstance(x, dict):
+                parts.append(x.get("out") or "")
+        return "".join(parts)
+    return ""
+
+
+def plan_value_error(pv, runs=None):
+    """返回该 plan 值的结构错误说明（None 表示合规）。"""
+    if isinstance(pv, str):
+        return None if pv.strip() else "译文为空"
+    if isinstance(pv, list):
+        if runs is not None and len(pv) != runs:
+            return f"逐 run 译文 {len(pv)} 条 ≠ 原文 run {runs} 个"
+        for i, x in enumerate(pv):
+            if isinstance(x, dict):
+                if not isinstance(x.get("out"), str) or not x.get("out").strip():
+                    return f"第 {i} 条缺少 out 译文"
+            elif isinstance(x, str):
+                if runs is not None and x == "":
+                    continue  # 空壳 run 位允许空串
+                if not x.strip() and runs is None:
+                    return f"第 {i} 条为空"
+            elif x is not None:
+                return f"第 {i} 条类型不支持"
+        return None
+    return "译文必须是字符串或字符串数组"
 
 
 def cmd_gate(args):
@@ -643,11 +683,12 @@ def cmd_gate(args):
             add("漏译", part=part, count=len(missing), paras=missing[:20])
         hollow = []
         for k, v in p.items():
-            if isinstance(v, list):
-                if not v or any(not isinstance(x, str) or not x.strip() for x in v):
-                    hollow.append(k)
-            elif (not isinstance(v, str) or not v.strip()
-                  or (k in src and v.strip() == src[k]["text"].strip())):
+            err = plan_value_error(v, src.get(k, {}).get("runs"))
+            if err:
+                hollow.append(k)
+            elif not plan_text(v).strip():
+                hollow.append(k)
+            elif k in src and plan_text(v).strip() == src[k]["text"].strip():
                 hollow.append(k)
         if hollow:
             add("译文为空或同原文", part=part, count=len(hollow), paras=hollow[:20])
@@ -666,10 +707,20 @@ def cmd_gate(args):
                 unsafe.append(k)
                 continue
             if isinstance(pv, list) and src[k].get("runs", 1) > 1:
-                # 纯字符串数组无法校验顺序 —— 只能靠人，给出提醒（不阻断）
-                if any(isinstance(x, str) for x in pv):
-                    add("逐 run 顺序未校验", part=part, paras=[k],
-                        why="建议用 [{\"src\":\"原文run文字\",\"out\":\"译文\"}] 形式，apply 会逐条核对顺序")
+                row_texts = src[k].get("run_texts") or []
+                for i, item in enumerate(pv):
+                    if not isinstance(item, dict):
+                        continue
+                    want, got = item.get("src"), (row_texts[i] if i < len(row_texts) else None)
+                    if want is not None and got is not None and want != got:
+                        add("逐 run 原文不符", part=part, paras=[k],
+                            why=f"第 {i} 条 src 写「{want}」，原文是「{got}」")
+                        break
+                else:
+                    # 纯字符串数组无法校验顺序 —— 只能靠人，给出提醒（不阻断）
+                    if any(isinstance(x, str) for x in pv):
+                        add("逐 run 顺序未校验", part=part, paras=[k],
+                            why="建议用 [{\"src\":\"原文run文字\",\"out\":\"译文\"}] 形式，apply 会逐条核对顺序")
         if unsafe:
             add("不可自动回填", part=part, count=len(unsafe), paras=unsafe[:20],
                 why="含 " + "/".join(sorted({b for k in unsafe for b in src[k]["blockers"]})))
@@ -687,9 +738,8 @@ def cmd_gate(args):
                 for i, r in src.items():
                     if term not in r["text"] or i not in p:
                         continue
-                    pv = p[i]
-                    joined = "".join(pv) if isinstance(pv, list) else pv
-                    if isinstance(joined, str) and trans.lower() not in joined.lower():
+                    joined = plan_text(p[i])
+                    if trans.lower() not in joined.lower():
                         miss.append(i)
                 if miss:
                     add("译法不一致", term=term, part=part, paras=miss[:10],
@@ -704,6 +754,19 @@ def cmd_gate(args):
                               "source_text": _snip(_src_text(mp, f.get("part"), x))}
                              for x in f["paras"][:3]]
 
+    # reviewed 只列"这次真的跑了"的检查 —— 没做的必须进 checks_skipped，
+    # 否则报告一边宣称"明写没查什么"，一边把没跑的规则列成已查（v0.5.0 的教训）
+    ran = ["漏译", "越界或非整数编号", "免译段落", "译文为空或同原文", "不可自动回填"]
+    if args.src:
+        ran.append("map 与源文档不符")
+    if args.terms:
+        ran += ["待确认术语被翻译", "术语表不可用", "译法不一致"]
+    skipped = []
+    if not args.terms:
+        skipped.append("术语检查未执行：没传 --terms，GATE-003/007/009 全部未跑")
+    if not args.src:
+        skipped.append("map 交叉核对未执行：没传 --src，GATE-006 未跑")
+
     report = {
         "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "gate": "blocked" if blocking else "pass",
@@ -711,9 +774,10 @@ def cmd_gate(args):
                  "src_sha256": _sha(args.src) if args.src and os.path.exists(args.src) else None,
                  "map_sha256": _sha(args.map), "plan_sha256": _sha(args.plan),
                  "terms_sha256": _sha(args.terms) if args.terms and os.path.exists(args.terms) else None},
-        "reviewed": [f"{v[0]} {k}：{v[1]}" for k, v in RULES.items()],
+        "reviewed": [f"{RULES[k][0]} {k}：{RULES[k][1]}" for k in ran if k in RULES],
+        "checks_skipped": skipped,
         "not_verified": ["译义准确性：闸门只校验结构与值的存在性，不判断译文对不对",
-                         "术语译法质量：只查状态枚举，不评价译法优劣",
+                         "术语译法质量：只查状态枚举与译法是否出现，不评价译法优劣",
                          "回译校验：未做",
                          "内嵌对象内部文本：文本框内段落可被 map 到，但格式与位置未校验"],
         "paragraphs_planned": translated,
@@ -740,6 +804,7 @@ def _src_text(mp, part, idx):
 
 def main():
     ap = argparse.ArgumentParser(prog="translate_kit", description="文档翻译：map / apply / check / gate")
+    ap.add_argument("--version", action="version", version=f"translate_kit {VERSION}")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     m = sub.add_parser("map", help="抽段落结构：容器/格式指纹/阻断因素/原文指纹")
