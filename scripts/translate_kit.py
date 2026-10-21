@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""translate_kit v0.5.1 — 文档翻译三件底层工具（纯标准库，零依赖）。
+"""translate_kit v0.5.2 — 文档翻译三件底层工具（纯标准库，零依赖）。
 
 子命令：
   map   提取 docx/pptx 段落：文本、容器、格式指纹、不可自动回填的阻断因素 → JSON
@@ -29,7 +29,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
-VERSION = "0.5.1"
+VERSION = "0.5.2"
 MAX_UNZIP_BYTES = 300 * 1024 * 1024  # 解压总量上限，超了直接拒绝
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -318,6 +318,21 @@ def cmd_apply(args):
     if src_abs == out_abs:
         print("错误：输出路径与源文件相同，拒绝执行（会销毁原件）")
         return 3
+    gate_info = None
+    if args.gate:
+        # 闸门没过就别回填 —— 否则"fail-closed"只是一句口号，一个参数就能绕过去
+        if not os.path.exists(args.gate):
+            print(f"错误：闸门报告不存在：{args.gate}")
+            return 3
+        rep = load_json(args.gate)
+        gate_info = {"path": os.path.abspath(args.gate), "gate": rep.get("gate"),
+                     "blocking": len(rep.get("blocking") or [])}
+        if rep.get("gate") != "pass":
+            print(f"错误：闸门报告是 {rep.get('gate')}（{gate_info['blocking']} 条阻断），拒绝回填")
+            for b in (rep.get("blocking") or [])[:6]:
+                print(f"  x [{b.get('rule_id')}] {b.get('type')}: {b.get('term', '')} "
+                      f"{b.get('why', '')} {b.get('paras', '')}")
+            return 3
     kind = detect_kind(args.src)
     if kind is None:
         print("错误：源文件不是可识别的 docx/pptx")
@@ -335,7 +350,7 @@ def cmd_apply(args):
                   for p, rows in load_json(args.map).get("parts", {}).items()}
 
     written = 0
-    skipped_unsafe, skipped_verify, bad_values = [], [], []
+    skipped_unsafe, skipped_verify, bad_values, forced = [], [], [], []
     with zipfile.ZipFile(args.src) as zin:
         total = sum(i.file_size for i in zin.infolist())
         if total > MAX_UNZIP_BYTES:
@@ -377,9 +392,11 @@ def cmd_apply(args):
                 hard = [b for b in d["blockers"]
                         if b in ("hyperlink", "line-break", "tab", "revision",
                                  "textbox", "nested-paragraph")]
-                if hard and not args.force_unsafe:
+                if d["blockers"] and hard and not args.force_unsafe:
                     skipped_unsafe.append({"part": part, "para": idx, "blockers": hard})
                     continue
+                if hard and args.force_unsafe:
+                    forced.append({"part": part, "para": idx, "blockers": hard})
                 if isinstance(val, list):
                     # 逐 run 对齐：条数 = run 数；空壳 run 位必须为 null/空；
                     # 元素可以是 {"src","out"} —— 此时逐条校验 src 与原 run 文本一致，
@@ -466,13 +483,18 @@ def cmd_apply(args):
         "paragraphs_skipped_unsafe": len(skipped_unsafe),
         "paragraphs_skipped_verify": len(skipped_verify),
         "bad_values": len(bad_values),
+        "forced": forced,
+        "gate": gate_info,
     }
     log = os.path.join(os.path.dirname(out_abs) or ".", "audit.jsonl")
     with open(log, "a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
     print(f"written: {args.out}  paragraphs_written={written} "
-          f"skipped_unsafe={len(skipped_unsafe)} skipped_verify={len(skipped_verify)} bad_values={len(bad_values)}")
+          f"skipped_unsafe={len(skipped_unsafe)} skipped_verify={len(skipped_verify)} "
+          f"bad_values={len(bad_values)} forced={len(forced)}")
+    if forced:
+        print(f"警告：{len(forced)} 段是在 --force-unsafe 下强改的，结构可能已被破坏（已记入 audit）")
     print(f"audit:   {log}")
     if skipped_unsafe or skipped_verify or bad_values:
         _emit({"skipped_unsafe": skipped_unsafe[:20], "skipped_verify": skipped_verify[:20],
@@ -818,6 +840,7 @@ def main():
     a.add_argument("-o", "--out", required=True, help="产物路径（不能与源相同）")
     a.add_argument("--map", help="map 生成的 JSON：逐段比对原文指纹，防 plan 错位（强烈建议传）")
     a.add_argument("--terms", help="术语表路径，仅用于把它的 SHA-256 写进审计记录")
+    a.add_argument("--gate", help="闸门报告 JSON：非 pass 则拒绝回填（推荐：gate→apply 串联）")
     a.add_argument("--force-unsafe", action="store_true",
                    help="强改含换行/超链接/修订/混排的段落（会破坏结构，默认拒绝）")
     a.set_defaults(f=cmd_apply)
