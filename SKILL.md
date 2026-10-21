@@ -24,7 +24,7 @@ python scripts/glossary_build.py --dir "D:\骨科文档" --out "D:\骨科术语"
 从几十份历史文档里抽「术语候选」（频次 / 覆盖文档数 / 示例上下文），人工确认一次就成正式术语表。
 支持 `.docx/.pptx` 与 `.txt/.md/.csv`（知识库导出件走后者，自动兼容 UTF-8/GB18030）。
 **好处**：术语错误是乘法的，定一次后面每份译文都受益。文档越多，`--min-docs` 越该调高（60 份以上用 5）；若导出件是「一篇一个大文件」，改用 `--min-docs 1 --min-freq 5`。
-详见 `HOME-CORPUS.md`。
+详见仓库 `README.md` 的「60 秒验证」与 `examples/README.md`。
 
 ### 1. 摸结构
 ```bash
