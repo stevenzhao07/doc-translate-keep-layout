@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 语法检查
+        run: python -m compileall -q scripts tests
+
+      - name: 红队回归测试
+        run: python tests/run_tests.py
+
+      - name: 自测样例（合成样本全链路）
+        run: |
+          python examples/make_sample.py /tmp/sample.docx
+          python scripts/translate_kit.py map /tmp/sample.docx -o /tmp/map.json
+          python scripts/translate_kit.py apply /tmp/sample.docx examples/plan.json --map /tmp/map.json -o /tmp/sample.en.docx
+          python scripts/translate_kit.py check /tmp/sample.docx /tmp/sample.en.docx -o /tmp/report.json
+          cat /tmp/report.json
+
+      - name: 审计记录摘要
+        if: always()
+        run: |
+          echo "## 测试结果" >> $GITHUB_STEP_SUMMARY
+          if [ -f /tmp/report.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            head -c 2000 /tmp/report.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
