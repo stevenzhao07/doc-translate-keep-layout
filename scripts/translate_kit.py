@@ -582,6 +582,14 @@ RULES = {
 }
 
 STATUS_ENUM = ("用户指定", "已确认", "待确认")
+
+
+def parse_status(cell):
+    """状态列常带注释：`已确认 · ISO 通用`、`待确认（broach 待定）`、`已确认; ASTM`。
+    取首个分隔符之前的部分做枚举匹配；匹配不上才算"未知状态"。
+    整格精确匹配会把正常人写的表格全部判成未确认 —— 那等于逼用户放弃术语检查。"""
+    head = re.split(r"[·・:：;；,，()（）\[\]【】|/\t]", cell or "", maxsplit=1)[0].strip()
+    return head if head in STATUS_ENUM else None
 BLOCKING_KINDS = {"漏译", "越界或非整数编号", "待确认术语被翻译", "译文为空或同原文",
                   "map 与源文档不符", "术语表不可用", "不可自动回填", "译法不一致",
                   "逐 run 原文不符"}
@@ -746,9 +754,10 @@ def cmd_gate(args):
         if unsafe:
             add("不可自动回填", part=part, count=len(unsafe), paras=unsafe[:20],
                 why="含 " + "/".join(sorted({b for k in unsafe for b in src[k]["blockers"]})))
-        for term, trans, status in terms:
-            if status not in STATUS_ENUM:
-                add("待确认术语被翻译", term=term, status=status, paras=[],
+        for term, trans, raw_status in terms:
+            status = parse_status(raw_status)
+            if status is None:
+                add("待确认术语被翻译", term=term, status=raw_status, paras=[],
                     why="状态不在枚举内（用户指定/已确认/待确认），按未确认处理")
                 continue
             if status == "待确认":
