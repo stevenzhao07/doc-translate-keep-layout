@@ -1,0 +1,59 @@
+{
+  "ts": "2026-10-21T03:12:08+00:00",
+  "gate": "blocked",
+  "tool": {
+    "name": "translate_kit",
+    "version": "0.5.1",
+    "src_sha256": "e30cfbeb546a247e190497eb475dc9b0ff6f3369f97dc8ba5752ce86ace142ae",
+    "map_sha256": "1ed46f12d8fb142abf0ddf6ec9c297dcf7f630318eef0514d5248646dd788df7",
+    "plan_sha256": "2375253cad660ad22f649f9bde5b21a5c0ca7daadeab9936a2776877a52ebf4a",
+    "terms_sha256": "e6f4d896df6caf0748bf335d321c003d9944f67e9499a15b7aae21605798eb5c"
+  },
+  "reviewed": [
+    "GATE-001 漏译：原文含文字（中日韩）的段落在 plan 中缺失",
+    "GATE-002 越界或非整数编号：plan 中的段落号不在合法范围",
+    "GATE-004 免译段落：原文不含中日韩字符，本无需翻译",
+    "GATE-005 译文为空或同原文：plan 的值为空、非字符串，或与原文完全相同",
+    "GATE-008 不可自动回填：该段含换行/超链接/修订/混排，apply 会拒绝，需人工处理",
+    "GATE-006 map 与源文档不符：map 里的原文指纹与 --src 实际内容不一致",
+    "GATE-003 待确认术语被翻译：术语表状态为「待确认」的词出现在被翻译段落",
+    "GATE-007 术语表不可用：术语表文件缺失、表头不合规或编码异常",
+    "GATE-009 译法不一致：已确认术语的译法没有出现在该段译文里"
+  ],
+  "checks_skipped": [],
+  "not_verified": [
+    "译义准确性：闸门只校验结构与值的存在性，不判断译文对不对",
+    "术语译法质量：只查状态枚举与译法是否出现，不评价译法优劣",
+    "回译校验：未做",
+    "内嵌对象内部文本：文本框内段落可被 map 到，但格式与位置未校验"
+  ],
+  "paragraphs_planned": 7,
+  "blocking": [
+    {
+      "type": "译法不一致",
+      "term": "清洁验证",
+      "part": "word/document.xml",
+      "paras": [
+        "1",
+        "4"
+      ],
+      "why": "术语表译法「cleaning validation」未出现在译文",
+      "rule_id": "GATE-009",
+      "rule_desc": "已确认术语的译法没有出现在该段译文里",
+      "certainty": "deterministic",
+      "evidence": [
+        {
+          "part": "word/document.xml",
+          "para": "1",
+          "source_text": "本文件规定了胫骨冲击锉手柄的清洁验证要求。"
+        },
+        {
+          "part": "word/document.xml",
+          "para": "4",
+          "source_text": "2.1 清洁验证指通过检测残留物证明清洁工艺有效的过程。"
+        }
+      ]
+    }
+  ],
+  "warning": []
+}
