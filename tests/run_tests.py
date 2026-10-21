@@ -495,6 +495,59 @@ def t32_ppr_tabs_not_blocking():
     return rows[0]["blockers"] == [], f"blockers={rows[0]['blockers']}"
 
 
+@case
+def t33_gate_accepts_src_out_form():
+    """外人评审高危：README 推荐的 {src,out} 写法，gate 曾直接 TypeError 并假报 GATE-005。"""
+    src = f"{TMP}/ag.docx"
+    body = ('<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>图 1：</w:t></w:r>'
+            '<w:r><w:t>这是正文。</w:t></w:r></w:p>')
+    mkdoxc(src, body)
+    run("map", src, "-o", f"{TMP}/ag.map.json")
+    terms = f"{TMP}/ag.tsv"
+    open(terms, "w", encoding="utf-8").write("源术语\t译法\t状态\n")
+    plan = f"{TMP}/ag.plan.json"
+    json.dump({"parts": {"word/document.xml": {"0": [
+        {"src": "图 1：", "out": "Figure 1:"},
+        {"src": "这是正文。", "out": "This is the body."}]}}}, open(plan, "w"))
+    rc, out = run("gate", "--map", f"{TMP}/ag.map.json", "--plan", plan,
+                  "--terms", terms, "--src", src, "-o", f"{TMP}/ag.gate.json")
+    rep = json.load(open(f"{TMP}/ag.gate.json"))
+    no_false_005 = not any(b.get("rule_id") == "GATE-005" for b in rep["blocking"])
+    return rc == 0 and no_false_005 and "Traceback" not in out, f"rc={rc} false005={not no_false_005}"
+
+
+@case
+def t34_gate_catches_swapped_src():
+    """顺序写反：gate 也要拦（不能只靠 apply）。"""
+    src = f"{TMP}/ah.docx"
+    body = ('<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>图 1：</w:t></w:r>'
+            '<w:r><w:t>这是正文。</w:t></w:r></w:p>')
+    mkdoxc(src, body)
+    run("map", src, "-o", f"{TMP}/ah.map.json")
+    plan = f"{TMP}/ah.plan.json"
+    json.dump({"parts": {"word/document.xml": {"0": [
+        {"src": "这是正文。", "out": "This is the body."},
+        {"src": "图 1：", "out": "Figure 1:"}]}}}, open(plan, "w"))
+    rc, out = run("gate", "--map", f"{TMP}/ah.map.json", "--plan", plan, "--src", src)
+    return rc == 1 and "GATE-011" in out, f"rc={rc} {out[:70]}"
+
+
+@case
+def t35_gate_reports_what_it_skipped():
+    """没传 --terms 时，报告不能把术语检查列进 reviewed。"""
+    src = f"{TMP}/ai.docx"; mkdoxc(src, P("任意中文段落内容"))
+    run("map", src, "-o", f"{TMP}/ai.map.json")
+    plan = f"{TMP}/ai.plan.json"
+    json.dump({"parts": {"word/document.xml": {"0": "Any Chinese paragraph"}}}, open(plan, "w"))
+    run("gate", "--map", f"{TMP}/ai.map.json", "--plan", plan, "-o", f"{TMP}/ai.gate.json")
+    rep = json.load(open(f"{TMP}/ai.gate.json"))
+    reviewed = " ".join(rep["reviewed"])
+    skipped = " ".join(rep["checks_skipped"])
+    ok = ("GATE-003" not in reviewed and "GATE-009" not in reviewed
+          and "--terms" in skipped)
+    return ok, f"reviewed_has_terms={'GATE-003' in reviewed} skipped={bool(skipped)}"
+
+
 def main():
     if os.path.isdir(TMP):
         shutil.rmtree(TMP)
