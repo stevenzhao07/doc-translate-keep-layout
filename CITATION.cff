@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this tool, cite it as below."
+title: "doc-translate-keep-layout: document translation that keeps layout, with a fail-closed pre-flight gate"
+abstract: >-
+  Translates .docx and .pptx files by replacing text nodes only, leaving runs,
+  fonts, sizes and table structure intact, and refuses to proceed when structure,
+  terminology or input integrity cannot be established. Ships a terminology
+  consistency table, a bidirectional layout review, per-run aligned fill for
+  mixed-format paragraphs, and a SHA-256 audit record for every run. Zero
+  third-party dependencies.
+authors:
+  - family-names: "Zhao"
+    given-names: "Xinghua"
+    orcid: "https://orcid.org/0009-0001-0512-1237"
+version: "0.5.0"
+date-released: "2026-10-21"
+license: MIT
+repository-code: "https://github.com/stevenzhao07/doc-translate-keep-layout"
+keywords:
+  - document translation
+  - docx
+  - pptx
+  - layout preservation
+  - terminology consistency
+  - audit trail
+  - medical device documentation
