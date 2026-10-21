@@ -1,0 +1,12 @@
+# 忽略规则：测试产物、临时输出、本机审计记录
+
+tests/_tmp/
+audit.jsonl
+*.map.json
+*.plan.json
+!examples/plan.json
+out.*.docx
+*.en.docx
+__pycache__/
+*.pyc
+.venv/
