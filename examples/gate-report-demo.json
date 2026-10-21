@@ -1,11 +1,11 @@
 {
-  "ts": "2026-10-21T03:12:08+00:00",
+  "ts": "2026-10-21T03:36:08+00:00",
   "gate": "blocked",
   "tool": {
     "name": "translate_kit",
-    "version": "0.5.1",
-    "src_sha256": "e30cfbeb546a247e190497eb475dc9b0ff6f3369f97dc8ba5752ce86ace142ae",
-    "map_sha256": "1ed46f12d8fb142abf0ddf6ec9c297dcf7f630318eef0514d5248646dd788df7",
+    "version": "0.5.2",
+    "src_sha256": "b07dc26cdba7700213ce074c604466639be5f55dfd576551a11783ee7392553a",
+    "map_sha256": "48dfc936c67199dd887e6eabadc0c5a797d7549349ca4150b9b58837200f24be",
     "plan_sha256": "2375253cad660ad22f649f9bde5b21a5c0ca7daadeab9936a2776877a52ebf4a",
     "terms_sha256": "e6f4d896df6caf0748bf335d321c003d9944f67e9499a15b7aae21605798eb5c"
   },
