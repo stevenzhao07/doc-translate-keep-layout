@@ -38,9 +38,11 @@ python tests/run_tests.py
 ```bash
 python scripts/translate_kit.py map   in.docx -o map.json
 python scripts/translate_kit.py gate  --map map.json --plan plan.json --terms 术语表.tsv --src in.docx -o gate.json
-python scripts/translate_kit.py apply in.docx plan.json --map map.json --terms 术语表.tsv -o out.en.docx
+python scripts/translate_kit.py apply in.docx plan.json --map map.json --terms 术语表.tsv --gate gate.json -o out.en.docx
 python scripts/translate_kit.py check in.docx out.en.docx -o report.json
 ```
+
+> **`apply --gate gate.json` 是 fail-closed 的关键一环**：闸门报告不是 `pass` 时它直接拒绝回填（退出码 3）。不传 `--gate` 相当于自己拆掉了这道闸 —— 只在做结构验收时这么干。
 
 | 命令 | 做什么 | 关键约束 |
 |---|---|---|
@@ -99,7 +101,9 @@ python scripts/translate_kit.py check in.docx out.en.docx -o report.json
 | 0 | 通过 | 继续下一步 |
 | 1 | `gate`/`check` 有阻断项或待复核项 | 看报告里的 `blocking` / `missing` 等字段 |
 | 2 | `apply` 有段落被跳过（结构不安全 / plan 对不上 / 值非法 / 数组条数不符） | 看屏幕上列出的段落号，人工处理 |
-| 3 | 输入不可用（不是 docx、解压超限、0 段落、输出路径与源相同） | 换文件或换路径，别改代码 |
+| 3 | 输入不可用（不是 docx、解压超限、0 段落、输出路径与源相同、**闸门报告不是 pass**） | 换文件或换路径，或先把闸门阻断面处理掉 |
+
+审计记录 `audit.jsonl` 每行含：源/plan/map/术语表/产物五份 SHA-256、实际写入段数、跳过数、非法值数、**`forced`（哪些段是 `--force-unsafe` 强改的）**、`gate`（用了哪份闸门报告、结论如何）。
 
 `check` 的 `grown`（膨胀超 3.5 倍）只作**提示**，不进退出码 —— 中译英天然会涨 3 倍，用绝对阈值会天天误报。真正判红的是 `missing` / `extra` / `format_changed` / `emptied` / `shrunk` / **`untranslated`（原文有中文、译文一字未改）**。
 
