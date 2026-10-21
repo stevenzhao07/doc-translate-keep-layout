@@ -75,8 +75,9 @@ python scripts/translate_kit.py gate --map map.json --plan plan.json --terms 术
 
 ### 4. 回填
 ```bash
-python scripts/translate_kit.py apply in.docx plan.json --map map.json -o out.<语种>.docx
+python scripts/translate_kit.py apply in.docx plan.json --map map.json --terms 术语表.tsv --gate gate.json -o out.<语种>.docx
 ```
+`--gate gate.json` **必传**：闸门结论不是 `pass` 时 `apply` 直接拒绝回填（退出码 3）。不传就等于自己拆掉这道闸，只在做结构验收时这么干。
 plan 的值有三种写法：`"译文"`（仅单 run 段）｜`["逐run1","逐run2"]`｜`[{"src":"原文run1","out":"译文1"}, ...]`（**推荐**，能校验顺序）。
 - 多 run 段落**必须用数组**，给字符串会被拒绝（那会把格式压平）
 - `run_texts` 里是 `null` 的位置 = 无文本节点的空壳 run，不许写
