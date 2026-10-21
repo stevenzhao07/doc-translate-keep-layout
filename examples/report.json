@@ -1,0 +1,49 @@
+{
+  "src": "C:\\Users\\SZYL\\AppData\\Local\\Temp\\tmpv9mmudvh\\sample.docx",
+  "dst": "C:\\Users\\SZYL\\AppData\\Local\\Temp\\tmpv9mmudvh\\sample.en.docx",
+  "tool_version": "0.5.1",
+  "para_delta": {
+    "word/document.xml": 0
+  },
+  "missing": [],
+  "extra": [],
+  "format_changed": [],
+  "shrunk": [],
+  "emptied": [],
+  "grown": [],
+  "untranslated": [],
+  "chars_ratio": 1.31,
+  "top_growth": [
+    {
+      "part": "word/document.xml",
+      "para": 0,
+      "ratio": 2.25,
+      "text": "[EN] 1 范围"
+    },
+    {
+      "part": "word/document.xml",
+      "para": 3,
+      "ratio": 2.25,
+      "text": "[EN] 2 术语"
+    },
+    {
+      "part": "word/document.xml",
+      "para": 5,
+      "ratio": 2.25,
+      "text": "[EN] 3 要求"
+    },
+    {
+      "part": "word/document.xml",
+      "para": 4,
+      "ratio": 1.36,
+      "text": "[EN] 2.1 清洁验证[EN] 指通过检测残留物证明清洁工艺有效的过程。"
+    },
+    {
+      "part": "word/document.xml",
+      "para": 1,
+      "ratio": 1.24,
+      "text": "[EN] 本文件规定了胫骨冲击锉手柄的清洁验证要求。"
+    }
+  ],
+  "verdict": "clean"
+}
