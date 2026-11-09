@@ -127,7 +127,7 @@ python scripts/translate_kit.py check in.docx out.en.docx -o report.json
 ## 自测
 
 ```bash
-python tests/run_tests.py      # 32 条回归用例，当前 32/32
+python tests/run_tests.py      # 40 条回归用例，当前 40/40
 ```
 
 用例覆盖：自我覆盖防护、plan 与文档错位、混排拒绝（含「第二个 run 无 rPr」隐蔽变体）、**逐 run 对齐保格式**、**顺序写反被拦**、**纯数组顺序不可校验时会告警**、**首 run 是图形时不静默抹字**、超链接/换行标记、文本框不重复计数、负索引、空值/同原文、假 map、术语表缺失 fail-closed、**术语表 BOM 兼容**、**译法不一致拦截**、韩文不免译、.docm 识别、Strict OOXML 不静默、空文档不静默、**mc:Ignorable 处理**、pptx 支持、**该翻没翻会被 check 抓**、**pPr 制表位不误判**、清空与收缩检测、坏 zip、解压炸弹。

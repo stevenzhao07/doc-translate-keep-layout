@@ -36,6 +36,9 @@ DOC = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 </w:document>"""
 
 def build(path):
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("[Content_Types].xml", CT)
         z.writestr("_rels/.rels", RELS)
