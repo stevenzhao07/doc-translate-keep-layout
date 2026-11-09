@@ -11,10 +11,12 @@ Translate `.docx` / `.pptx` without wrecking the layout — plus a terminology t
 cd doc-translate-keep-layout
 
 # 2) 生成一份样例文档，跑通全链路（零依赖，Python 3.11+）
-python examples/make_sample.py /tmp/sample.docx
-python scripts/translate_kit.py map   /tmp/sample.docx -o /tmp/map.json
-python scripts/translate_kit.py apply /tmp/sample.docx examples/plan.json --map /tmp/map.json -o /tmp/sample.en.docx
-python scripts/translate_kit.py check /tmp/sample.docx /tmp/sample.en.docx -o /tmp/report.json
+# 先建一个本地输出目录：Windows `md out` / macOS·Linux `mkdir -p out`
+python examples/make_sample.py out/sample.docx
+python scripts/translate_kit.py map   out/sample.docx -o out/map.json
+python scripts/translate_kit.py apply out/sample.docx examples/plan.json --map out/map.json -o out/sample.en.docx
+python scripts/translate_kit.py check out/sample.docx out/sample.en.docx -o out/report.json
+# 别写成 /tmp —— Windows 上不存在该路径，会直接报错
 
 # 3) 自测：35 条回归用例
 python tests/run_tests.py
